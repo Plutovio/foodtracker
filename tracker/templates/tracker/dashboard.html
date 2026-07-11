@@ -1,0 +1,120 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Dashboard - PG Food Tracker{% endblock %}
+
+{% block content %}
+<!-- Top Header Branding -->
+<header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div>
+        <p style="font-size: 0.8125rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">{{ month_name }}</p>
+        <h1>PG Food Tracker</h1>
+    </div>
+    <form action="{% url 'logout' %}" method="post" style="margin: 0;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8125rem; border-radius: var(--radius-sm); width: auto;">
+            Logout
+        </button>
+    </form>
+</header>
+
+<!-- Balance Summary Card -->
+<!-- HTMX loads/updates this card dynamically whenever 'update-balance' event is triggered from body -->
+<div id="balance-summary-container" 
+     hx-get="{% url 'balance_summary' %}" 
+     hx-trigger="load, update-balance from:body" 
+     hx-swap="outerHTML">
+    <!-- Initial Loading State -->
+    <div class="card summary-card" id="balance-summary-card">
+        <h2>Outstanding Balance</h2>
+        <div class="summary-balance">₹{{ stats.outstanding|floatformat:2 }}</div>
+        <div class="summary-details">
+            <span>Accrued: ₹{{ stats.total_accrued|floatformat:2 }}</span>
+            <span>Paid: ₹{{ stats.total_paid|floatformat:2 }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Today's Log Card -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="margin: 0;">Today's Meals</h2>
+        <span style="font-size: 0.8125rem; font-weight: 500; color: var(--primary); background: var(--primary-light); padding: 2px 8px; border-radius: var(--radius-full);">
+            {{ today|date:"d M, Y" }}
+        </span>
+    </div>
+    
+    {% if not has_rates %}
+        <div style="text-align: center; padding: 20px 10px;">
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 12px;">
+                No rates have been configured yet.
+            </p>
+            <a href="{% url 'settings' %}" class="btn" style="width: auto; padding: 8px 16px; font-size: 0.875rem; display: inline-block;">
+                Configure Rates
+            </a>
+        </div>
+    {% else %}
+        <div class="meals-grid">
+            {% for item in today_meals %}
+                <div class="meal-row">
+                    <div class="meal-info">
+                        <span class="meal-name">{{ item.meal_name }}</span>
+                        <span class="meal-rate">₹{{ item.rate|floatformat:2 }}</span>
+                    </div>
+                    
+                    <div class="toggle-group" id="toggle-{{ item.meal_name }}">
+                        <!-- Yes Button -->
+                        <button type="button" 
+                                class="toggle-btn {% if item.status == 'Consumed' %}consumed{% else %}neutral{% endif %}"
+                                hx-post="{% url 'toggle_meal' %}" 
+                                hx-vals='{"date": "{{ today|date:"Y-m-d" }}", "meal_name": "{{ item.meal_name }}", "status": "Consumed"}'
+                                hx-target="#toggle-{{ item.meal_name }}"
+                                hx-swap="outerHTML">
+                            Yes
+                        </button>
+                        <!-- No Button -->
+                        <button type="button" 
+                                class="toggle-btn {% if item.status == 'Skipped' %}skipped{% else %}neutral{% endif %}"
+                                hx-post="{% url 'toggle_meal' %}" 
+                                hx-vals='{"date": "{{ today|date:"Y-m-d" }}", "meal_name": "{{ item.meal_name }}", "status": "Skipped"}'
+                                hx-target="#toggle-{{ item.meal_name }}"
+                                hx-swap="outerHTML">
+                            No
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Past 7 Days History Card -->
+<div class="card" style="margin-bottom: 24px;">
+    <h2>Recent Activity</h2>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+        {% for day in past_days %}
+            <div class="list-item">
+                <div>
+                    <div style="font-weight: 600; font-size: 0.9375rem;">
+                        {% if day.is_today %}Today{% else %}{{ day.date|date:"l, d M" }}{% endif %}
+                    </div>
+                    <div class="list-item-meta" style="display: flex; gap: 8px; margin-top: 2px;">
+                        {% for meal in day.meals %}
+                            <span style="display: inline-flex; align-items: center; gap: 2px;">
+                                <span class="dot {% if meal.status == 'Consumed' %}consumed{% else %}skipped{% endif %}" style="width: 6px; height: 6px;"></span>
+                                <span style="font-size: 0.75rem; color: {% if meal.status == 'Consumed' %}var(--text-secondary){% else %}var(--text-muted){% endif %};">
+                                    {{ meal.char }}
+                                </span>
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="amount-tag {% if day.cost > 0 %}danger{% else %}success{% endif %}">
+                    {% if day.cost > 0 %}+₹{{ day.cost|floatformat:2 }}{% else %}₹0.00{% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <p style="font-size: 0.875rem; color: var(--text-muted); text-align: center; padding: 12px 0;">No activity logs found.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

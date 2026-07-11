@@ -1,0 +1,158 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}History - PG Food Tracker{% endblock %}
+
+{% block content %}
+<header style="margin-bottom: 20px;">
+    <h1>Monthly Ledger</h1>
+    <p style="font-size: 0.875rem; color: var(--text-secondary);">View and export details for previous months</p>
+</header>
+
+<!-- Filter Form -->
+<div class="card" style="padding: 14px 20px;">
+    <form method="get" action="{% url 'history' %}" style="display: flex; gap: 10px; align-items: flex-end;">
+        <div style="flex: 1;">
+            <label for="filter-month" class="form-label">Month</label>
+            <select id="filter-month" name="month" class="form-control" style="padding: 8px 10px;">
+                {% for m_num, m_name in months %}
+                    <option value="{{ m_num }}" {% if m_num == selected_month %}selected{% endif %}>{{ m_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div style="flex: 1;">
+            <label for="filter-year" class="form-label">Year</label>
+            <select id="filter-year" name="year" class="form-control" style="padding: 8px 10px;">
+                {% for y in years %}
+                    <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <button type="submit" class="btn" style="width: auto; padding: 8px 16px;">Go</button>
+    </form>
+</div>
+
+<!-- Monthly Summary Card -->
+<div class="card summary-card" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+    <h2 style="color: rgba(255, 255, 255, 0.9);">{{ month_name }} Ledger</h2>
+    <div class="summary-balance">₹{{ stats.outstanding|floatformat:2 }}</div>
+    <div class="summary-details" style="flex-wrap: wrap; gap: 8px;">
+        <span>Meals: ₹{{ stats.meal_cost|floatformat:2 }}</span>
+        <span>Extras: ₹{{ stats.extra_cost|floatformat:2 }}</span>
+        <span>Paid: ₹{{ stats.total_paid|floatformat:2 }}</span>
+    </div>
+</div>
+
+<!-- Copy Summary Section -->
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="margin: 0;">WhatsApp/Message Summary</h2>
+        <span id="copy-status" style="font-size: 0.75rem; color: var(--success); font-weight: 600; display: none;">Copied!</span>
+    </div>
+    <p style="font-size: 0.8125rem; color: var(--text-secondary); margin-bottom: 10px;">
+        Click the text box below to copy a pre-formatted summary to send to your PG owner.
+    </p>
+    <div class="summary-box" id="summary-text-box" onclick="copyToClipboard()">{{ summary_text }}</div>
+</div>
+
+<!-- Detailed Logs Tabs/Accordions -->
+<div class="card" style="margin-bottom: 24px;">
+    <h2>Detailed Logs</h2>
+    
+    <div class="tab-nav">
+        <div id="tab-meals" class="tab-item active" onclick="switchLedgerTab('meals')">Meals</div>
+        <div id="tab-extras" class="tab-item" onclick="switchLedgerTab('extras')">Extras</div>
+        <div id="tab-payments" class="tab-item" onclick="switchLedgerTab('payments')">Payments</div>
+    </div>
+
+    <!-- Meals Table -->
+    <div id="ledger-meals">
+        {% if meals %}
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+                {% for m in meals %}
+                    <div class="list-item" style="padding: 10px 0;">
+                        <div>
+                            <span style="font-weight: 600; font-size: 0.875rem;">{{ m.date|date:"d M (l)" }}</span>
+                            <span style="font-size: 0.8125rem; color: var(--text-secondary); margin-left: 8px;">{{ m.meal_name }}</span>
+                        </div>
+                        <span class="amount-tag {% if m.status == 'Consumed' %}danger{% else %}success{% endif %}">
+                            {{ m.status }} (₹{{ m.cost_charged|floatformat:2 }})
+                        </span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="font-size: 0.875rem; color: var(--text-muted); text-align: center; padding: 24px 0;">No meal logs for this period.</p>
+        {% endif %}
+    </div>
+
+    <!-- Extras Table -->
+    <div id="ledger-extras" style="display: none;">
+        {% if extras %}
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+                {% for e in extras %}
+                    <div class="list-item" style="padding: 10px 0;">
+                        <div>
+                            <span style="font-weight: 600; font-size: 0.875rem;">{{ e.date|date:"d M" }}</span>
+                            <p style="font-size: 0.8125rem; color: var(--text-secondary); margin-top: 2px;">{{ e.description }}</p>
+                        </div>
+                        <span class="amount-tag danger">+₹{{ e.amount|floatformat:2 }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="font-size: 0.875rem; color: var(--text-muted); text-align: center; padding: 24px 0;">No extra charges for this period.</p>
+        {% endif %}
+    </div>
+
+    <!-- Payments Table -->
+    <div id="ledger-payments" style="display: none;">
+        {% if payments %}
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+                {% for p in payments %}
+                    <div class="list-item" style="padding: 10px 0;">
+                        <div>
+                            <span style="font-weight: 600; font-size: 0.875rem;">{{ p.date|date:"d M" }}</span>
+                            <p style="font-size: 0.8125rem; color: var(--text-secondary); margin-top: 2px;">Via {{ p.method }}</p>
+                        </div>
+                        <span class="amount-tag success">-₹{{ p.amount|floatformat:2 }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="font-size: 0.875rem; color: var(--text-muted); text-align: center; padding: 24px 0;">No payments logged for this period.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function copyToClipboard() {
+        const text = document.getElementById('summary-text-box').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            const status = document.getElementById('copy-status');
+            status.style.display = 'inline';
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+        });
+    }
+
+    function switchLedgerTab(type) {
+        const tabs = ['meals', 'extras', 'payments'];
+        tabs.forEach(tab => {
+            const tabEl = document.getElementById('tab-' + tab);
+            const contentEl = document.getElementById('ledger-' + tab);
+            if (tab === type) {
+                tabEl.classList.add('active');
+                contentEl.style.display = 'block';
+            } else {
+                tabEl.classList.remove('active');
+                contentEl.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}
