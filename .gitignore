@@ -8,3 +8,7 @@ local_settings.py
 /media/
 
 .vercel
+.env
+.env.local
+venv/
+.venv/
