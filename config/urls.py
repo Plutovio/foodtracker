@@ -18,10 +18,17 @@ from django.contrib import admin
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from tracker import views
+import os
+from django.conf import settings
+from django.http import FileResponse
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     
+    # Root level PWA files
+    path('sw.js', lambda r: FileResponse(open(os.path.join(settings.BASE_DIR, 'tracker/static/js/sw.js'), 'rb'), content_type='application/javascript')),
+    path('manifest.json', lambda r: FileResponse(open(os.path.join(settings.BASE_DIR, 'tracker/static/manifest.json'), 'rb'), content_type='application/json')),
+
     # Tracker core views
     path('', views.dashboard, name='dashboard'),
     path('balance-summary/', views.balance_summary, name='balance_summary'),

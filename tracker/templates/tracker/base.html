@@ -13,6 +13,14 @@
     <!-- Custom Style -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     
+    <!-- PWA Configurations -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="PG Food">
+    <link rel="apple-touch-icon" href="{% static 'images/icon.png' %}">
+    
     <!-- HTMX CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
     {% block extra_head %}{% endblock %}
@@ -66,5 +74,16 @@
         </a>
     </nav>
     {% endif %}
+
+    <!-- Service Worker Registration for PWA Installability -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('ServiceWorker registered:', reg))
+                    .catch(err => console.error('ServiceWorker registration failed:', err));
+            });
+        }
+    </script>
 </body>
 </html>

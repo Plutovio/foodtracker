@@ -1,0 +1,18 @@
+{
+  "name": "PG Food Tracker",
+  "short_name": "PG Food",
+  "description": "Track your daily food logs, rates, ad-hoc costs, and payments to calculate monthly PG dues.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/images/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
