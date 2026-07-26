@@ -110,12 +110,12 @@ elif is_vercel:
     import shutil
     tmp_db = Path('/tmp/db.sqlite3')
     base_db = BASE_DIR / 'db.sqlite3'
-    if not tmp_db.exists() and base_db.exists():
+    if base_db.exists():
         try:
-            shutil.copyfile(base_db, tmp_db)
-        except Exception:
-            pass
-    DATABASES['default']['NAME'] = tmp_db
+            shutil.copyfile(str(base_db), str(tmp_db))
+        except Exception as e:
+            print(f"Vercel DB copy notice: {e}")
+    DATABASES['default']['NAME'] = str(tmp_db)
 
 
 # Password validation
