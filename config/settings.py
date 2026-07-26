@@ -94,8 +94,20 @@ DATABASES = {
     }
 }
 
+is_vercel = os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV') or 'var/task' in str(BASE_DIR)
+
 if os.environ.get('DATABASE_URL'):
     DATABASES['default'] = dj_database_url.config(conn_max_age=600, ssl_require=True)
+elif is_vercel:
+    import shutil
+    tmp_db = Path('/tmp/db.sqlite3')
+    base_db = BASE_DIR / 'db.sqlite3'
+    if not tmp_db.exists() and base_db.exists():
+        try:
+            shutil.copyfile(base_db, tmp_db)
+        except Exception:
+            pass
+    DATABASES['default']['NAME'] = tmp_db
 
 
 # Password validation
