@@ -42,6 +42,7 @@ if os.environ.get('RENDER') or os.environ.get('RENDER_EXTERNAL_HOSTNAME'):
 # Force-allow Vercel hosts
 if os.environ.get('VERCEL') or os.environ.get('VERCEL_URL') or os.environ.get('VERCEL_ENV'):
     ALLOWED_HOSTS.append('.vercel.app')
+    ALLOWED_HOSTS.append('*')
     vercel_host = os.environ.get('VERCEL_URL')
     if vercel_host:
         ALLOWED_HOSTS.append(vercel_host.strip())
