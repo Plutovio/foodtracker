@@ -34,6 +34,10 @@ urlpatterns = [
     path('balance-summary/', views.balance_summary, name='balance_summary'),
     path('toggle-meal/', views.toggle_meal, name='toggle_meal'),
     path('add-transaction/', views.add_transaction, name='add_transaction'),
+    path('log-past-meals/', views.log_past_meals, name='log_past_meals'),
+    path('delete-extra/<int:pk>/', views.delete_extra, name='delete_extra'),
+    path('delete-payment/<int:pk>/', views.delete_payment, name='delete_payment'),
+    path('delete-meal-log/<int:pk>/', views.delete_meal_log, name='delete_meal_log'),
     path('settings/', views.settings_view, name='settings'),
     path('history/', views.history_view, name='history'),
 

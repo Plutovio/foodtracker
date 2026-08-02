@@ -152,12 +152,12 @@ def toggle_meal(request):
     is_skipped = log.status == 'Skipped'
 
     html = f"""
-    <div class="toggle-group" id="toggle-{meal_name}">
+    <div class="toggle-group" id="toggle-{meal_name}-{date_str}">
         <button type="button" 
                 class="toggle-btn {'consumed' if is_consumed else 'neutral'}"
                 hx-post="/toggle-meal/" 
                 hx-vals='{{"date": "{date_str}", "meal_name": "{meal_name}", "status": "Consumed"}}'
-                hx-target="#toggle-{meal_name}"
+                hx-target="#toggle-{meal_name}-{date_str}"
                 hx-swap="outerHTML">
             Yes
         </button>
@@ -165,7 +165,7 @@ def toggle_meal(request):
                 class="toggle-btn {'skipped' if is_skipped else 'neutral'}"
                 hx-post="/toggle-meal/" 
                 hx-vals='{{"date": "{date_str}", "meal_name": "{meal_name}", "status": "Skipped"}}'
-                hx-target="#toggle-{meal_name}"
+                hx-target="#toggle-{meal_name}-{date_str}"
                 hx-swap="outerHTML">
             No
         </button>
@@ -206,6 +206,82 @@ def add_transaction(request):
         'today': timezone.localtime().date().strftime('%Y-%m-%d')
     }
     return render(request, 'tracker/add_transaction.html', context)
+
+@login_required
+def log_past_meals(request):
+    """View to log or edit meals for a specific past date."""
+    today = timezone.localtime().date()
+    
+    if request.method == 'POST':
+        date_str = request.POST.get('date')
+        try:
+            log_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return redirect('log_past_meals')
+
+        meal_rates = MealRate.objects.all()
+        for rate in meal_rates:
+            status = request.POST.get(f'meal_{rate.meal_name}')
+            if status in ('Consumed', 'Skipped'):
+                log, _ = MealLog.objects.get_or_create(
+                    date=log_date,
+                    meal_name=rate.meal_name,
+                    defaults={'cost_charged': rate.rate, 'status': status}
+                )
+                log.status = status
+                log.cost_charged = rate.rate if status == 'Consumed' else 0
+                log.save()
+            elif status == 'remove':
+                MealLog.objects.filter(date=log_date, meal_name=rate.meal_name).delete()
+
+        return redirect('dashboard')
+
+    # GET: show the form
+    date_str = request.GET.get('date', today.strftime('%Y-%m-%d'))
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        selected_date = today
+
+    meal_rates = MealRate.objects.all()
+    meals = []
+    for rate in meal_rates:
+        log = MealLog.objects.filter(date=selected_date, meal_name=rate.meal_name).first()
+        meals.append({
+            'meal_name': rate.meal_name,
+            'rate': rate.rate,
+            'status': log.status if log else None,
+        })
+
+    context = {
+        'selected_date': selected_date,
+        'selected_date_str': selected_date.strftime('%Y-%m-%d'),
+        'today_str': today.strftime('%Y-%m-%d'),
+        'meals': meals,
+        'meal_rates': meal_rates,
+    }
+    return render(request, 'tracker/log_past_meals.html', context)
+
+@login_required
+def delete_extra(request, pk):
+    """Delete an extra charge entry."""
+    if request.method == 'POST':
+        ExtraCharge.objects.filter(pk=pk).delete()
+    return redirect(request.POST.get('next', 'history'))
+
+@login_required
+def delete_payment(request, pk):
+    """Delete a payment log entry."""
+    if request.method == 'POST':
+        PaymentLog.objects.filter(pk=pk).delete()
+    return redirect(request.POST.get('next', 'history'))
+
+@login_required
+def delete_meal_log(request, pk):
+    """Delete a meal log entry."""
+    if request.method == 'POST':
+        MealLog.objects.filter(pk=pk).delete()
+    return redirect(request.POST.get('next', 'history'))
 
 @login_required
 def settings_view(request):
@@ -288,6 +364,9 @@ def history_view(request):
         (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December')
     ]
 
+    # Build query string for delete redirects
+    history_url = f'?month={selected_month}&year={selected_year}'
+
     context = {
         'selected_month': selected_month,
         'selected_year': selected_year,
@@ -298,6 +377,7 @@ def history_view(request):
         'stats': stats,
         'summary_text': summary_text,
         'years': years,
-        'months': months
+        'months': months,
+        'history_url': history_url,
     }
     return render(request, 'tracker/history.html', context)
