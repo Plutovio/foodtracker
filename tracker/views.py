@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.db.models import Sum
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from datetime import date, datetime, timedelta
 from .models import MealRate, MealLog, ExtraCharge, PaymentLog
 
@@ -267,21 +267,21 @@ def delete_extra(request, pk):
     """Delete an extra charge entry."""
     if request.method == 'POST':
         ExtraCharge.objects.filter(pk=pk).delete()
-    return redirect(request.POST.get('next', 'history'))
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/history/'))
 
 @login_required
 def delete_payment(request, pk):
     """Delete a payment log entry."""
     if request.method == 'POST':
         PaymentLog.objects.filter(pk=pk).delete()
-    return redirect(request.POST.get('next', 'history'))
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/history/'))
 
 @login_required
 def delete_meal_log(request, pk):
     """Delete a meal log entry."""
     if request.method == 'POST':
         MealLog.objects.filter(pk=pk).delete()
-    return redirect(request.POST.get('next', 'history'))
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/history/'))
 
 @login_required
 def settings_view(request):
